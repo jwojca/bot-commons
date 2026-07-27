@@ -44,7 +44,7 @@ async def transcribe(
         filename: Název s příponou kvůli detekci formátu na straně API.
         language: ISO kód jazyka (např. ``"cs"``).
         model: Model providera; ``None`` = jeho výchozí
-            (``whisper-1`` / ``gemini-2.5-flash``).
+            (``whisper-1`` / ``gemini-3.6-flash``).
         provider: ``"openai"`` (default), ``"gemini"`` nebo ``"local"``.
         local_url: Base URL lokální whisper služby (jen ``provider="local"``).
 

@@ -37,7 +37,7 @@ from bot_commons.transcription import (
 )
 from bot_commons.whisper import transcribe
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 __all__ = [
     "PRICING",

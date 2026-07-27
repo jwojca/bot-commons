@@ -52,7 +52,7 @@ konfigurací, ne zásahem do kódu.
 | `TRANSCRIPTION_PROVIDER` | Co běží | Povinné env proměnné | Volitelné |
 |---|---|---|---|
 | `openai` (výchozí) | OpenAI Whisper API | `OPENAI_API_KEY` | `WHISPER_MODEL` (default `whisper-1`) |
-| `gemini` | Gemini API, multimodální audio vstup | `GEMINI_API_KEY` | `GEMINI_MODEL` (default `gemini-2.5-flash`) |
+| `gemini` | Gemini API, multimodální audio vstup | `GEMINI_API_KEY` | `GEMINI_MODEL` (default `gemini-3.6-flash`) |
 | `local` | Vlastní whisper služba | `WHISPER_LOCAL_URL` | – |
 
 Sestaví se **jen zvolený** provider, takže klíč toho druhého nastavený být nemusí.
@@ -65,7 +65,7 @@ OPENAI_API_KEY=sk-...
 # .env – Gemini varianta
 TRANSCRIPTION_PROVIDER=gemini
 GEMINI_API_KEY=AIza...
-GEMINI_MODEL=gemini-2.5-flash   # volitelné
+GEMINI_MODEL=gemini-3.6-flash   # volitelné
 ```
 
 ```python
@@ -91,6 +91,10 @@ Poznámky k chování:
 - Chybějící klíč spadne **při sestavení** providera, ne až u prvního přepisu.
 - Gemini posílá audio inline jako base64; nad 12 MiB se přepne na Files API.
   Telegram hlasovky se do inline vejdou vždycky.
+- **Google modely stahuje z oběhu.** Když API vrátí 404 s „no longer available",
+  je čas přepnout `GEMINI_MODEL`. Aktuální seznam:
+  `curl -H "x-goog-api-key: $GEMINI_API_KEY" \
+  https://generativelanguage.googleapis.com/v1beta/models`
 - Gemini dostává prompt na doslovný přepis s jazykovým hintem (`language="cs"`
   → „Transcribe this audio verbatim in Czech“).
 

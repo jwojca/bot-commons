@@ -77,7 +77,7 @@ async def test_transcribe_gemini_through_facade():
     """Fasáda umí i nového providera a pořád vrací plain str."""
     respx.post(
         "https://generativelanguage.googleapis.com/v1beta/"
-        "models/gemini-2.5-flash:generateContent"
+        "models/gemini-3.6-flash:generateContent"
     ).mock(
         return_value=httpx.Response(
             200,
