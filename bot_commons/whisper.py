@@ -1,23 +1,29 @@
-"""Speech-to-text přes OpenAI Whisper API nebo lokální whisper službu.
+"""Zpětně kompatibilní fasáda nad :mod:`bot_commons.transcription`.
 
-Sjednocuje tři dřívější kopie z jednotlivých botů. Funkce bere všechny vstupy
-explicitně (api_key, model, provider…) – nečte žádné globály ani konfiguraci,
-takže si ji každý bot obalí ve svém stylu.
+Vlastní logika se přestěhovala do providerů. Tenhle modul zůstává, aby boti,
+kteří volají ``transcribe(...)``, nemuseli měnit ani řádek – vrací pořád
+plain ``str``.
+
+Nový kód ať sáhne rovnou po providerech, dostane i metadata (kdo/čím přepisoval):
+
+```python
+from bot_commons.transcription import provider_from_env
+
+provider = provider_from_env()
+result = await provider.transcribe(audio)
+```
 """
 
 from __future__ import annotations
 
-import asyncio
 import logging
 
-import httpx
+from bot_commons.transcription.factory import build_provider
+from bot_commons.transcription.openai_whisper import OPENAI_URL
 
 log = logging.getLogger(__name__)
 
-OPENAI_URL = "https://api.openai.com/v1/audio/transcriptions"
-_OPENAI_TIMEOUT = 60.0
-_LOCAL_TIMEOUT = 180.0
-_MAX_RETRIES = 3
+__all__ = ["OPENAI_URL", "transcribe"]
 
 
 async def transcribe(
@@ -26,7 +32,7 @@ async def transcribe(
     api_key: str = "",
     filename: str = "voice.ogg",
     language: str = "cs",
-    model: str = "whisper-1",
+    model: str | None = None,
     provider: str = "openai",
     local_url: str | None = None,
 ) -> str:
@@ -34,47 +40,18 @@ async def transcribe(
 
     Args:
         audio: Obsah hlasové zprávy (Telegram voice = OGG/Opus).
-        api_key: OpenAI API klíč (jen pro ``provider="openai"``).
+        api_key: API klíč zvoleného providera (``local`` ho nepotřebuje).
         filename: Název s příponou kvůli detekci formátu na straně API.
         language: ISO kód jazyka (např. ``"cs"``).
-        model: Whisper model (jen pro OpenAI provider).
-        provider: ``"openai"`` (default) nebo ``"local"``.
-        local_url: Base URL lokální whisper služby (jen pro ``provider="local"``).
+        model: Model providera; ``None`` = jeho výchozí
+            (``whisper-1`` / ``gemini-2.5-flash``).
+        provider: ``"openai"`` (default), ``"gemini"`` nebo ``"local"``.
+        local_url: Base URL lokální whisper služby (jen ``provider="local"``).
+
+    Returns:
+        Přepsaný text. Metadata o providerovi tahle fasáda zahazuje – kdo je
+        chce, ať volá providera přímo.
     """
-    if provider == "openai":
-        return await _transcribe_openai(audio, api_key, filename, language, model)
-    if provider == "local":
-        if not local_url:
-            raise ValueError("provider='local' vyžaduje local_url")
-        return await _transcribe_local(audio, filename, local_url)
-    raise ValueError(f"Neznámý whisper provider: {provider!r}")
-
-
-async def _transcribe_openai(
-    audio: bytes, api_key: str, filename: str, language: str, model: str
-) -> str:
-    headers = {"Authorization": f"Bearer {api_key}"}
-    for attempt in range(_MAX_RETRIES):
-        async with httpx.AsyncClient(timeout=_OPENAI_TIMEOUT) as client:
-            files = {"file": (filename, audio, "audio/ogg")}
-            data = {"model": model, "language": language}
-            r = await client.post(OPENAI_URL, files=files, data=data, headers=headers)
-            if r.status_code == 429:
-                wait = int(r.headers.get("retry-after", 5 * (attempt + 1)))
-                log.warning("OpenAI rate limit, čekám %ss (pokus %d/%d)", wait, attempt + 1, _MAX_RETRIES)
-                await asyncio.sleep(wait)
-                continue
-            r.raise_for_status()
-            text: str = r.json()["text"]
-            log.info("whisper.transcribe chars=%d", len(text.strip()))
-            return text.strip()
-    raise RuntimeError(f"OpenAI Whisper API vrátilo 429 po {_MAX_RETRIES} pokusech")
-
-
-async def _transcribe_local(audio: bytes, filename: str, local_url: str) -> str:
-    async with httpx.AsyncClient(timeout=_LOCAL_TIMEOUT) as client:
-        files = {"audio": (filename, audio, "audio/ogg")}
-        r = await client.post(f"{local_url}/transcribe", files=files)
-        r.raise_for_status()
-        text: str = r.json()["text"]
-        return text.strip()
+    impl = build_provider(provider, api_key=api_key, model=model, local_url=local_url)
+    result = await impl.transcribe(audio, filename=filename, language=language)
+    return result.text

@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "bot-commons"
-version = "0.1.1"
-description = "Sdílená logika napříč Telegram boty (Whisper přepis, výpočet ceny tokenů, JSON parsing, env/logging helpery)."
+version = "0.2.0"
+description = "Sdílená logika napříč Telegram boty (přepis hlasu přes Whisper/Gemini, výpočet ceny tokenů, JSON parsing, env/logging helpery)."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
