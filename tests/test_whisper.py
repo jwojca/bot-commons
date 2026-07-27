@@ -1,4 +1,4 @@
-"""Testy whisper přepisu (httpx přes respx mock)."""
+"""Testy zpětně kompatibilní fasády ``whisper.transcribe`` (httpx přes respx mock)."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import pytest
 import respx
 
 from bot_commons import whisper
+from bot_commons.transcription import openai_whisper
 
 
 @respx.mock
@@ -25,7 +26,7 @@ async def test_transcribe_openai_retries_on_429(monkeypatch):
     async def _no_sleep(_):
         return None
 
-    monkeypatch.setattr(whisper.asyncio, "sleep", _no_sleep)
+    monkeypatch.setattr(openai_whisper.asyncio, "sleep", _no_sleep)
     respx.post(whisper.OPENAI_URL).mock(
         side_effect=[
             httpx.Response(429, headers={"retry-after": "0"}),
@@ -41,7 +42,7 @@ async def test_transcribe_openai_gives_up_after_retries(monkeypatch):
     async def _no_sleep(_):
         return None
 
-    monkeypatch.setattr(whisper.asyncio, "sleep", _no_sleep)
+    monkeypatch.setattr(openai_whisper.asyncio, "sleep", _no_sleep)
     respx.post(whisper.OPENAI_URL).mock(
         return_value=httpx.Response(429, headers={"retry-after": "0"})
     )
@@ -69,3 +70,19 @@ async def test_local_requires_url():
 async def test_unknown_provider():
     with pytest.raises(ValueError):
         await whisper.transcribe(b"audio", provider="nonsense")
+
+
+@respx.mock
+async def test_transcribe_gemini_through_facade():
+    """Fasáda umí i nového providera a pořád vrací plain str."""
+    respx.post(
+        "https://generativelanguage.googleapis.com/v1beta/"
+        "models/gemini-2.5-flash:generateContent"
+    ).mock(
+        return_value=httpx.Response(
+            200,
+            json={"candidates": [{"content": {"parts": [{"text": " ahoj z gemini "}]}}]},
+        )
+    )
+    out = await whisper.transcribe(b"audio", api_key="g-test", provider="gemini")
+    assert out == "ahoj z gemini"
