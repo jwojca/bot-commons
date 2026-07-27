@@ -23,7 +23,7 @@ from bot_commons.transcription.openai_whisper import OPENAI_URL
 
 GENERATE_URL = (
     "https://generativelanguage.googleapis.com/v1beta/"
-    "models/gemini-2.5-flash:generateContent"
+    "models/gemini-3.6-flash:generateContent"
 )
 UPLOAD_URL = "https://generativelanguage.googleapis.com/upload/v1beta/files"
 
@@ -75,7 +75,7 @@ async def test_gemini_result_shape():
     assert (result.text, result.provider, result.model, result.language) == (
         "ahoj",
         "gemini",
-        "gemini-2.5-flash",
+        "gemini-3.6-flash",
         "cs",
     )
 
@@ -128,9 +128,9 @@ async def test_gemini_language_hint_is_configurable():
 async def test_gemini_custom_model_hits_its_own_url():
     route = respx.post(
         "https://generativelanguage.googleapis.com/v1beta/"
-        "models/gemini-2.5-pro:generateContent"
+        "models/gemini-3.5-flash:generateContent"
     ).mock(return_value=_gemini_ok("text"))
-    await GeminiTranscriptionProvider("g-test", model="gemini-2.5-pro").transcribe(b"audio")
+    await GeminiTranscriptionProvider("g-test", model="gemini-3.5-flash").transcribe(b"audio")
     assert route.called
 
 
@@ -373,10 +373,10 @@ def test_provider_from_env_is_case_insensitive(clean_env):
 async def test_provider_from_env_reads_model_override(clean_env):
     clean_env.setenv("TRANSCRIPTION_PROVIDER", "gemini")
     clean_env.setenv("GEMINI_API_KEY", "g-test")
-    clean_env.setenv("GEMINI_MODEL", "gemini-2.5-pro")
+    clean_env.setenv("GEMINI_MODEL", "gemini-3.5-flash")
     route = respx.post(
         "https://generativelanguage.googleapis.com/v1beta/"
-        "models/gemini-2.5-pro:generateContent"
+        "models/gemini-3.5-flash:generateContent"
     ).mock(return_value=_gemini_ok("text"))
 
     await provider_from_env().transcribe(b"audio")

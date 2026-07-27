@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 
 API_BASE = "https://generativelanguage.googleapis.com/v1beta"
 UPLOAD_URL = "https://generativelanguage.googleapis.com/upload/v1beta/files"
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-3.6-flash"
 
 # Limit celého requestu je 20 MB a base64 nafoukne data o ~33 %.
 # 12 MiB syrového audia → ~16 MB v JSONu, což je bezpečná rezerva.
